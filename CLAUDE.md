@@ -44,11 +44,38 @@ status — строка с флагами через запятую: "TooShort, 
 src/
   api/        — fetch-функции, React Query хуки
   components/ — переиспользуемые UI-компоненты
-  features/   — экраны/фичи (dashboard, history, 3d...)
+  features/   — экраны/фичи (dashboard, history, 3d, overview, alerts)
   lib/        — чистая бизнес-логика (без JSX)
   config/     — константы, параметры polling, единицы измерения
   types/      — TypeScript-типы (Measurement, Beam, BunkerGeometry...)
+mock-server/  — Express-мок (CommonJS, отдельный от фронта, свой package.json)
 ```
+
+## Команды разработки
+
+```bash
+npm run dev          # Vite dev-сервер (HMR) — фронт ожидает мок или бэкенд на VITE_API_BASE_URL
+npm run mock          # Express мок-сервер (mock-server/index.cjs) → http://localhost:3001
+npm run build         # tsc -b && vite build — обязателен перед завершением этапа
+npm run lint          # ESLint --max-warnings 0 — не должно быть ни одного warning
+npm test              # Vitest run (все тесты один раз)
+npm run test:watch    # Vitest watch
+npx vitest run src/lib/__tests__/alerts.test.ts   # один файл
+npx vitest run -t "computeAlerts"                 # по имени теста/describe
+```
+
+Фронт и мок — независимые npm-проекты (`mock-server/` не в eslint-обходе, у него нет tsconfig). Для реального бэкенда переключить `.env`: `VITE_API_BASE_URL` + `VITE_MOCK_MODE=false` (контракт — `API.md`).
+
+## Архитектура: сквозные потоки
+
+- **React Query хуки** (`api/hooks.ts`) — единая точка правды по данным сервера:
+  - `queryKeys.*` — фабрики ключей, используются и одиночными хуками (`useLatestMeasurement(bunkerId)`), и мульти-бункерными (`useAllLatestMeasurements(bunkers)` через `useQueries`). Ключи совпадают → один и тот же ресурс не запрашивается дважды, если открыт дашборд конкретного бункера и одновременно идёт фоновый скан всех бункеров для алертов/обзора.
+  - `byBunkerId(bunkers, results)` — сводит массив результатов `useQueries` в `Record<bunkerId, data>`; общий хелпер для `OverviewPage` и `useAlerts`.
+  - Разные `refetchInterval` для одних и тех же данных в разных ролях: дашборд конкретного бункера опрашивает чаще (реальный live-вид), фоновый скан для алертов/обзора — реже.
+- **Роутинг** (`App.tsx`) — `bunker_id` живёт в URL (`/bunkers/:bunkerId`, `/bunkers/:bunkerId/history`), не в локальном state. `Layout` (шапка + `Outlet` + статус-бар + тосты) общий для всех маршрутов; неизвестный `bunkerId` → редирект на `/` внутри страницы, которая его читает (не в `App.tsx`).
+- **Алерты** (`features/alerts/`) — не отдельный API-ресурс. `useAlerts()` дергает те же мульти-бункерные хуки (`useAllLatestMeasurements`, `useAllBuildup`, `useHealth`) и прогоняет результат через чистую `computeAlerts()` из `lib/alerts.ts`. Если меняешь правило алерта — правь `lib/alerts.ts` и его тест, не компоненты.
+- **3D-сцена** (`features/3d/Scene3DPanel`) — подключена через `React.lazy`, чтобы `three.js` не попадал в основной бандл. Поверхность руды не рендерит сырые высоты лучей — сначала строится интерполированная сетка (`lib/interpolateSurface.buildSurfaceGrid`), и маркеры, и поверхность, и подписи недостоверных лучей берут высоту из неё же (единый источник, иначе расходятся визуально).
+- **Тесты компонентов, использующих React Query** — не оборачивают в `QueryClientProvider`; вместо этого мокируют `../../api/hooks` напрямую через `vi.mock`. Компоненты, зависящие от роутинга (используют `useParams`/`Link`/`useNavigate`), оборачиваются в `MemoryRouter`. Смотри существующие тесты в `__tests__/` рядом с компонентом как образец, прежде чем писать новый.
 
 ## Открытые вопросы (фиксировать в README)
 

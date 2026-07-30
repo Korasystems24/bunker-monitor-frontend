@@ -1,0 +1,22 @@
+name: bunker-monitor
+
+services:
+  frontend:
+    build: .
+    ports:
+      - '${FRONTEND_PORT:-5173}:5173'
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - mock
+
+  mock:
+    build: ./mock-server
+    ports:
+      - '${MOCK_PORT:-3001}:3001'
+    volumes:
+      - ./mock-server:/app
+      - /app/node_modules
