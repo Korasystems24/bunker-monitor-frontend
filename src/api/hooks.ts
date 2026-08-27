@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { POLL_INTERVAL_MS } from '../config'
 import { bunkersApi } from './bunkers'
-import type { BunkerInfo, Measurement } from '../types'
+import type { BunkerInfo, MeasurementSummary } from '../types'
 
 export const queryKeys = {
   bunkers: () => ['bunkers'] as const,
@@ -120,10 +120,10 @@ export async function fetchAllMeasurements(
   bunkerId: string,
   from: string,
   to: string,
-): Promise<Measurement[]> {
+): Promise<MeasurementSummary[]> {
   const PAGE = 100
   let offset = 0
-  const all: Measurement[] = []
+  const all: MeasurementSummary[] = []
 
   while (true) {
     const page = await bunkersApi.getMeasurements(bunkerId, { from, to, limit: PAGE, offset })

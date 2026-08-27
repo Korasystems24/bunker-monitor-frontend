@@ -1,5 +1,6 @@
 import type { ParsedBeam } from '../types'
 import { BEAM_AXES, BEAM_POSITIONS } from '../config'
+import { hasUsableHeight } from './parseMeasurement'
 
 export interface SurfaceGridCell {
   axis: string
@@ -32,11 +33,14 @@ export function buildSurfaceGrid(beams: ParsedBeam[]): SurfaceGridCell[][] {
   let heights: number[][] = BEAM_AXES.map((axis) =>
     BEAM_POSITIONS.map((position) => {
       const beam = beamMap.get(`${axis}${position}`)
-      return beam && beam.reliable ? beam.height : 0
+      return beam && hasUsableHeight(beam) ? beam.height : 0
     }),
   )
   let known: boolean[][] = BEAM_AXES.map((axis) =>
-    BEAM_POSITIONS.map((position) => Boolean(beamMap.get(`${axis}${position}`)?.reliable)),
+    BEAM_POSITIONS.map((position) => {
+      const beam = beamMap.get(`${axis}${position}`)
+      return Boolean(beam && hasUsableHeight(beam))
+    }),
   )
   const initiallyKnown = known.map((row) => [...row])
 

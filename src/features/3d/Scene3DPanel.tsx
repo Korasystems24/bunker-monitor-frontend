@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import type { BunkerGeometry, Measurement } from '../../types'
-import { parseBeam } from '../../lib/parseMeasurement'
+import { hasUsableHeight, parseBeam } from '../../lib/parseMeasurement'
 import { computeHeightRange } from '../../lib/colorScale'
 import { FALLBACK_BUNKER_SHAPE, FALLBACK_SENSOR } from '../../config'
 import { BunkerShape } from './BunkerShape'
@@ -35,7 +35,7 @@ export function Scene3DPanel({
   const heightRange = useMemo(
     () =>
       computeHeightRange(
-        parsedBeams.filter((b) => b.reliable && b.height > 0).map((b) => b.height),
+        parsedBeams.filter(hasUsableHeight).map((b) => b.height),
       ),
     [parsedBeams],
   )

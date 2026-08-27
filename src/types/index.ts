@@ -13,7 +13,7 @@ export type BeamStatusFlag = KnownBeamStatusFlag | string
 
 export interface Beam {
   beam_name: string
-  height: number
+  height: number | null
   // Raw status string from API: "TooShort, NotUsed, WeakSignal"
   status: string
 }
@@ -21,19 +21,30 @@ export interface Beam {
 export interface Measurement {
   id: number
   ts: string // ISO-8601 UTC
-  avg_level: number
-  min_level: number
-  max_level: number
-  mass: number
-  volume: number
+  avg_level: number | null
+  min_level: number | null
+  max_level: number | null
+  mass: number | null
+  volume: number | null
   beams: Beam[]
+}
+
+// Paginated /measurements items intentionally omit beams in the real backend.
+export interface MeasurementSummary {
+  id: number
+  ts: string // ISO-8601 UTC
+  avg_level: number | null
+  min_level: number | null
+  max_level: number | null
+  mass: number | null
+  volume: number | null
 }
 
 export interface MeasurementsPage {
   total: number
   limit: number
   offset: number
-  items: Measurement[]
+  items: MeasurementSummary[]
 }
 
 export interface BunkerInfo {
@@ -45,16 +56,16 @@ export interface BunkerInfo {
 
 export interface BunkerStats {
   period: 'day' | 'week' | 'month'
-  min_level: number
-  max_level: number
-  avg_level: number
+  min_level: number | null
+  max_level: number | null
+  avg_level: number | null
   series: Array<{
     ts: string
-    avg_level: number
-    min_level: number
-    max_level: number
-    mass: number
-    volume: number
+    avg_level: number | null
+    min_level: number | null
+    max_level: number | null
+    mass: number | null
+    volume: number | null
   }>
 }
 

@@ -7,9 +7,15 @@ import { OUTER_ZONE_POSITION_THRESHOLD } from '../config'
  */
 export function parseBeam(beam: Beam): ParsedBeam {
   const statusFlags = parseStatus(beam.status)
-  const reliable = isBeamReliable(statusFlags)
+  const reliable = beam.height !== null && isBeamReliable(statusFlags)
   const parsedName = parseBeamName(beam.beam_name)
   return { ...beam, statusFlags, reliable, parsedName }
+}
+
+export function hasUsableHeight(
+  beam: ParsedBeam,
+): beam is ParsedBeam & { height: number; reliable: true } {
+  return beam.reliable && beam.height !== null
 }
 
 /**

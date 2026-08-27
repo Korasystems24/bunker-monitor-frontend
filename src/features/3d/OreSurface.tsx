@@ -5,6 +5,7 @@ import { BEAM_AXES, BEAM_POSITIONS, FALLBACK_BUNKER_SHAPE } from '../../config'
 import { buildSurfaceGrid, computeCenterHeight } from '../../lib/interpolateSurface'
 import { resolveBeamXY, maxBeamRadius } from '../../lib/geometryUtils'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
+import { hasUsableHeight } from '../../lib/parseMeasurement'
 
 interface OreSurfaceProps {
   beams: ParsedBeam[]
@@ -41,7 +42,7 @@ export function OreSurface({ beams, geometry }: OreSurfaceProps) {
       : FALLBACK_BUNKER_SHAPE.top_diameter_m / 2
 
     const heightRange = computeHeightRange(
-      beams.filter((b) => b.reliable && b.height > 0).map((b) => b.height),
+      beams.filter(hasUsableHeight).map((b) => b.height),
     )
 
     const vertexCount = 1 + nAxes * nPos

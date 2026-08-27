@@ -4,6 +4,7 @@ import type { ParsedBeam } from '../../types'
 import { BEAM_AXES, BEAM_POSITIONS, OUTER_ZONE_POSITION_THRESHOLD } from '../../config'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
 import { formatLevel } from '../../lib/formatters'
+import { hasUsableHeight } from '../../lib/parseMeasurement'
 import { BeamTooltip } from './BeamTooltip'
 
 interface BeamTableProps {
@@ -30,14 +31,14 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
   }, [beams])
 
   const heightRange = useMemo(() => {
-    const heights = beams.filter((b) => b.reliable && b.height > 0).map((b) => b.height)
+    const heights = beams.filter(hasUsableHeight).map((b) => b.height)
     return computeHeightRange(heights)
   }, [beams])
 
   const hoveredBeamData = hoveredBeam ? beamMap.get(hoveredBeam) : null
 
   function cellColor(beam: ParsedBeam | undefined): string {
-    if (!beam || !beam.reliable) return 'transparent'
+    if (!beam || !hasUsableHeight(beam)) return 'transparent'
     const norm =
       heightRange.max === heightRange.min
         ? 0.5
@@ -107,7 +108,7 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
                   >
                     {!beam ? (
                       <span className="text-slate-700">—</span>
-                    ) : !beam.reliable ? (
+                    ) : !hasUsableHeight(beam) ? (
                       // Status icon (not just color) — important for colorblind users
                       <span
                         className="inline-flex items-center justify-center text-slate-600 opacity-50"

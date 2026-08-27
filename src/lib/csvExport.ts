@@ -1,8 +1,9 @@
-import type { Measurement } from '../types'
+import type { MeasurementSummary } from '../types'
 import { UNITS } from '../config'
 
 // Escape a CSV field value: wrap in quotes if it contains comma, newline, or quote
-function escapeField(value: string | number): string {
+function escapeField(value: string | number | null): string {
+  if (value === null) return ''
   const s = String(value)
   if (s.includes(',') || s.includes('\n') || s.includes('"')) {
     return `"${s.replace(/"/g, '""')}"`
@@ -10,11 +11,11 @@ function escapeField(value: string | number): string {
   return s
 }
 
-function row(fields: (string | number)[]): string {
+function row(fields: (string | number | null)[]): string {
   return fields.map(escapeField).join(',')
 }
 
-export function measurementsToCsv(measurements: Measurement[]): string {
+export function measurementsToCsv(measurements: MeasurementSummary[]): string {
   const header = row([
     'id',
     `ts_utc`,

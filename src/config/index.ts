@@ -1,5 +1,13 @@
-// API base URL — switch to real FastAPI by changing VITE_API_BASE_URL in .env
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001'
+// API base URL includes the version prefix; API methods append only resource paths.
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+).replace(/\/+$/, '')
+
+// In development Vite proxies the API path to avoid browser CORS restrictions.
+// Production builds call the configured backend URL directly.
+export const API_REQUEST_BASE_URL = import.meta.env.DEV
+  ? new URL(API_BASE_URL).pathname.replace(/\/+$/, '')
+  : API_BASE_URL
 
 export const POLL_INTERVAL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 1500)
 

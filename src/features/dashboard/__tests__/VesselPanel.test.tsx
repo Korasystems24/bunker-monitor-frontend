@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { VesselPanel } from '../VesselPanel'
 import type { Beam, Measurement } from '../../../types'
 
-const makeBeam = (beam_name: string, height: number, status = ''): Beam => ({
+const makeBeam = (beam_name: string, height: number | null, status = ''): Beam => ({
   beam_name,
   height,
   status,
@@ -45,22 +45,25 @@ describe('VesselPanel', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument()
   })
 
-  it('derives min/max level only from reliable beams with height > 0', () => {
+  it('derives min/max level from reliable beams, including a valid zero', () => {
     const measurement = makeMeasurement([
       makeBeam('A1', 5.0, 'Disabled'), // unreliable, excluded
-      makeBeam('A2', 0, ''), // height 0, excluded
+      makeBeam('A2', 0, ''), // valid zero is a real reading when status is reliable
       makeBeam('A3', 1.5, ''),
       makeBeam('A4', 3.0, ''),
     ])
     render(
       <VesselPanel measurement={measurement} bunkerName="Бункер 1" online={true} isLoading={false} />,
     )
-    expect(screen.getByText('1.50 м')).toBeInTheDocument()
+    expect(screen.getByText('0.00 м')).toBeInTheDocument()
     expect(screen.getByText('3.00 м')).toBeInTheDocument()
   })
 
-  it('shows — for min/max level when no reliable beams have height > 0', () => {
-    const measurement = makeMeasurement([makeBeam('A1', 0, ''), makeBeam('A2', 5.0, 'Disabled')])
+  it('shows — for min/max level when heights are null or unreliable', () => {
+    const measurement = makeMeasurement([
+      makeBeam('A1', null, ''),
+      makeBeam('A2', 5.0, 'Disabled'),
+    ])
     render(
       <VesselPanel measurement={measurement} bunkerName="Бункер 1" online={true} isLoading={false} />,
     )

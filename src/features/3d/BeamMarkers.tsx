@@ -7,6 +7,7 @@ import { resolveBeamXY, maxBeamRadius } from '../../lib/geometryUtils'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
 import { buildSurfaceGrid } from '../../lib/interpolateSurface'
 import { BeamTooltip } from '../dashboard/BeamTooltip'
+import { hasUsableHeight } from '../../lib/parseMeasurement'
 
 interface BeamMarkersProps {
   beams: ParsedBeam[]
@@ -34,7 +35,7 @@ export function BeamMarkers({ beams, geometry, selectedBeam, onSelectBeam }: Bea
   }, [beams])
 
   const heightRange = useMemo(
-    () => computeHeightRange(beams.filter((b) => b.reliable && b.height > 0).map((b) => b.height)),
+    () => computeHeightRange(beams.filter(hasUsableHeight).map((b) => b.height)),
     [beams],
   )
 
@@ -54,7 +55,7 @@ export function BeamMarkers({ beams, geometry, selectedBeam, onSelectBeam }: Bea
           const beamName = `${axis}${position}`
           const beam = beamMap.get(beamName)
           const { x, y } = resolveBeamXY(axis, position, geometry, fallbackMaxRadius)
-          const worldHeight = beam?.reliable ? beam.height : grid[a][p].height
+          const worldHeight = beam && hasUsableHeight(beam) ? beam.height : grid[a][p].height
           return { beamName, beam, x, y, worldHeight }
         }),
       ),
@@ -69,7 +70,7 @@ export function BeamMarkers({ beams, geometry, selectedBeam, onSelectBeam }: Bea
       {markers.map(({ beamName, beam, x, y, worldHeight }) => {
         const isSelected = selectedBeam === beamName
         let color = '#4b5563'
-        if (beam?.reliable) {
+        if (beam && hasUsableHeight(beam)) {
           const norm =
             heightRange.max === heightRange.min
               ? 0.5

@@ -8,6 +8,7 @@ import { resolveBeamXY, maxBeamRadius } from '../../lib/geometryUtils'
 import { severitySvgColor, severityIcon, severityLabel } from '../../lib/buildupUtils'
 import { BeamTooltip } from './BeamTooltip'
 import { HeightLegend } from '../../components/HeightLegend'
+import { hasUsableHeight } from '../../lib/parseMeasurement'
 
 interface RadialBeamGridProps {
   beams: ParsedBeam[]
@@ -74,7 +75,7 @@ export function RadialBeamGrid({
   }, [buildupZones])
 
   const heightRange = useMemo(() => {
-    const heights = beams.filter((b) => b.reliable && b.height > 0).map((b) => b.height)
+    const heights = beams.filter(hasUsableHeight).map((b) => b.height)
     return computeHeightRange(heights)
   }, [beams])
 
@@ -211,7 +212,7 @@ export function RadialBeamGrid({
               let fillColor: string
               if (!beam) {
                 fillColor = 'hsl(220, 10%, 25%)'
-              } else if (!beam.reliable) {
+              } else if (!hasUsableHeight(beam)) {
                 fillColor = 'hsl(220, 10%, 30%)'
               } else {
                 const norm =
@@ -255,7 +256,7 @@ export function RadialBeamGrid({
                   />
 
                   {/* Height label (only for hovered or selected) */}
-                  {(isHovered || isSelected) && beam && beam.reliable && (
+                  {(isHovered || isSelected) && beam && hasUsableHeight(beam) && (
                     <text
                       x={x}
                       y={y - radius - 4}

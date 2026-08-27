@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { Measurement } from '../../types'
-import { parseBeam } from '../../lib/parseMeasurement'
+import { hasUsableHeight, parseBeam } from '../../lib/parseMeasurement'
 import { formatLevel, formatVolume, formatMass, formatTimestamp } from '../../lib/formatters'
 import { Skeleton } from '../../components/Skeleton'
 
@@ -29,7 +29,7 @@ export function VesselPanel({ measurement, bunkerName, online, isLoading }: Vess
   const minMax = useMemo(() => {
     if (!measurement) return null
     const parsed = measurement.beams.map(parseBeam)
-    const reliableHeights = parsed.filter((b) => b.reliable && b.height > 0).map((b) => b.height)
+    const reliableHeights = parsed.filter(hasUsableHeight).map((b) => b.height)
     return {
       minLevel: reliableHeights.length ? Math.min(...reliableHeights) : null,
       maxLevel: reliableHeights.length ? Math.max(...reliableHeights) : null,

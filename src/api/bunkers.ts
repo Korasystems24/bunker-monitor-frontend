@@ -10,10 +10,10 @@ import type {
 import { apiFetch } from './client'
 
 export const bunkersApi = {
-  listBunkers: () => apiFetch<BunkerInfo[]>('/api/v1/bunkers'),
+  listBunkers: () => apiFetch<BunkerInfo[]>('/bunkers'),
 
   getLatestMeasurement: (bunkerId: string) =>
-    apiFetch<Measurement>(`/api/v1/bunkers/${bunkerId}/measurements/latest`),
+    apiFetch<Measurement>(`/bunkers/${encodeURIComponent(bunkerId)}/measurements/latest`),
 
   getMeasurements: (
     bunkerId: string,
@@ -26,18 +26,18 @@ export const bunkersApi = {
     if (params.offset !== undefined) qs.set('offset', String(params.offset))
     const query = qs.toString()
     return apiFetch<MeasurementsPage>(
-      `/api/v1/bunkers/${bunkerId}/measurements${query ? `?${query}` : ''}`,
+      `/bunkers/${encodeURIComponent(bunkerId)}/measurements${query ? `?${query}` : ''}`,
     )
   },
 
   getStats: (bunkerId: string, period: 'day' | 'week' | 'month') =>
-    apiFetch<BunkerStats>(`/api/v1/bunkers/${bunkerId}/stats?period=${period}`),
+    apiFetch<BunkerStats>(`/bunkers/${encodeURIComponent(bunkerId)}/stats?period=${period}`),
 
   getGeometry: (bunkerId: string) =>
-    apiFetch<BunkerGeometry>(`/api/v1/bunkers/${bunkerId}/geometry`),
+    apiFetch<BunkerGeometry>(`/bunkers/${encodeURIComponent(bunkerId)}/geometry`),
 
-  getHealth: () => apiFetch<Health>('/api/v1/health'),
+  getHealth: () => apiFetch<Health>('/health'),
 
   getBuildup: (bunkerId: string) =>
-    apiFetch<BuildupAnalysis>(`/api/v1/bunkers/${bunkerId}/buildup`),
+    apiFetch<BuildupAnalysis>(`/bunkers/${encodeURIComponent(bunkerId)}/buildup`),
 }

@@ -38,6 +38,11 @@ describe('parseBeam', () => {
     expect(parseBeam(beam).reliable).toBe(false)
   })
 
+  it('sets reliable=false for a nullable height even without status flags', () => {
+    const beam = makeBeam({ height: null, status: '' })
+    expect(parseBeam(beam).reliable).toBe(false)
+  })
+
   it('sets reliable=true for degraded-but-trustworthy flags', () => {
     const beam = makeBeam({ status: 'WeakSignal, TooLong' })
     expect(parseBeam(beam).reliable).toBe(true)

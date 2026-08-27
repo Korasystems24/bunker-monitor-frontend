@@ -7,16 +7,10 @@ services:
       - '${FRONTEND_PORT:-5173}:5173'
     env_file:
       - .env
+    environment:
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://host.docker.internal:8000}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     volumes:
       - .:/app
-      - /app/node_modules
-    depends_on:
-      - mock
-
-  mock:
-    build: ./mock-server
-    ports:
-      - '${MOCK_PORT:-3001}:3001'
-    volumes:
-      - ./mock-server:/app
       - /app/node_modules

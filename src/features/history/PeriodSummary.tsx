@@ -22,7 +22,7 @@ function SummaryCard({
   color,
 }: {
   label: string
-  value: number
+  value: number | null
   unit: string
   color: string
 }) {
@@ -30,8 +30,8 @@ function SummaryCard({
     <div className="flex flex-col gap-1 rounded-lg border border-surface-3 bg-surface-1 px-4 py-3">
       <span className="text-xs text-slate-500">{label}</span>
       <span className={`text-xl font-bold tabular-nums ${color}`}>
-        {value.toFixed(2)}
-        <span className="ml-1 text-sm font-normal text-slate-500">{unit}</span>
+        {value === null ? '—' : value.toFixed(2)}
+        {value !== null && <span className="ml-1 text-sm font-normal text-slate-500">{unit}</span>}
       </span>
     </div>
   )

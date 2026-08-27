@@ -82,16 +82,13 @@
 # Фронтенд
 npm install
 
-# Мок-сервер
-cd mock-server && npm install && cd ..
 ```
 
-### 2. Запустить мок-сервер
+### 2. Запустить backend
 
 ```bash
-# В отдельном терминале:
-npm run mock
-# → http://localhost:3001
+# Backend API должен быть доступен по адресу:
+curl http://localhost:8000/api/v1/bunkers
 ```
 
 ### 3. Запустить фронтенд
@@ -101,30 +98,36 @@ npm run dev
 # → http://localhost:5173 (обзор бункеров) → выберите бункер → /bunkers/:id (дашборд)
 ```
 
-### Переключение на реальный FastAPI
+### Конфигурация FastAPI
 
-В файле `.env` замените:
+В файле `.env`:
 
 ```
-VITE_API_BASE_URL=http://your-backend-host:8000
+VITE_API_BASE_URL=http://localhost:8000/api/v1
 VITE_MOCK_MODE=false
 ```
 
 Контракт API описан ниже в разделе «API».
 
+В development-режиме запросы идут через same-origin Vite proxy, поэтому локальный frontend
+работает даже если backend не разрешает CORS для `http://localhost:5173`. Для production-сборки
+backend или внешний reverse proxy должен разрешать origin развернутого frontend.
+
 ## Запуск через Docker Compose
 
-Альтернатива ручному запуску (`npm run dev` + `npm run mock` в двух терминалах) — удобна на общем сервере разработки, где параллельно крутится несколько проектов, изолированных друг от друга.
+Альтернатива ручному запуску frontend; реальный backend должен быть доступен на host-порту 8000.
 
 ```bash
 cp .env.example .env   # при необходимости поменять порты/VITE_API_BASE_URL
 docker compose up --build
 ```
 
-Поднимает два контейнера: `frontend` (Vite dev-сервер с HMR, исходники смонтированы с хоста) и `mock` (Express мок-сервер). `VITE_API_BASE_URL` открывается напрямую из браузера (`src/api/client.ts`), а не через Vite dev-прокси, поэтому при запуске **не на этой же машине** (например, на сервере разработки) в `.env` должен быть адрес сервера, а не `localhost`:
+Поднимает контейнер `frontend` (Vite dev-сервер с HMR, исходники смонтированы с хоста).
+Vite проксирует `/api/v1` на backend через `host.docker.internal:8000`. Для backend на другом
+адресе задайте server-side target:
 
 ```
-VITE_API_BASE_URL=http://<адрес-сервера>:3001
+VITE_API_PROXY_TARGET=http://<адрес-backend>:8000
 ```
 
 ### Зарезервированные порты проекта
@@ -134,20 +137,19 @@ VITE_API_BASE_URL=http://<адрес-сервера>:3001
 | Сервис | Порт (host) | Переменная |
 |--------|------------|-----------|
 | Frontend (Vite dev) | `5173` | `FRONTEND_PORT` |
-| Mock-сервер | `3001` | `MOCK_PORT` |
-| Будущий FastAPI-бэкенд | `8000` | — (отдельный репозиторий) |
+| FastAPI backend | `8000` | — (отдельный репозиторий) |
 
-При конфликте с другим проектом — поменять `FRONTEND_PORT`/`MOCK_PORT` в `.env`, код менять не нужно.
+При конфликте с другим проектом поменяйте `FRONTEND_PORT` в `.env`.
 
 ## Переменные окружения
 
 | Переменная | По умолчанию | Описание |
 |-----------|-------------|---------|
-| `VITE_API_BASE_URL` | `http://localhost:3001` | URL бэкенда или мок-сервера (открывается из браузера напрямую) |
+| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | URL backend с версионным префиксом |
+| `VITE_API_PROXY_TARGET` | URL из `VITE_API_BASE_URL` | Target Vite proxy; нужен отдельно только внутри Docker или при нестандартной сети |
 | `VITE_POLL_INTERVAL_MS` | `1500` | Интервал опроса live-данных (мс) |
-| `VITE_MOCK_MODE` | `true` | Показывать индикатор MOCK в статус-баре |
+| `VITE_MOCK_MODE` | `false` | Показывать индикатор MOCK в статус-баре |
 | `FRONTEND_PORT` | `5173` | Host-порт контейнера `frontend` в Docker Compose |
-| `MOCK_PORT` | `3001` | Host-порт контейнера `mock` в Docker Compose |
 
 ## API
 
@@ -232,7 +234,7 @@ npm run test:watch # Vitest в watch-режиме
 - **Unit-тесты `lib/`** (P1): `parseStatus`, `isBeamReliable`, `parseBeamName`, `heightToColor`, форматтеры, CSV-экспорт, `dateUtils`, `geometryUtils`, `interpolateSurface`, `buildupUtils`, `alerts` (`computeAlerts`).
 - **Компонентные тесты** (P2): `BeamHealthBar`, `PeriodSummary`, `VesselPanel`, `StatusBar`, `HistoryPage` (bunkerId из маршрута, редирект на неизвестный бункер), `BuildupPanel`, `AlertsPanel`, `OverviewPage`, `useAlertToasts` (через `renderHook` + `vi.useFakeTimers`), стек `@testing-library/react` + `@testing-library/user-event` + `jest-dom`.
 - React Query хуки в тестах `HistoryPage`/`OverviewPage` мокируются напрямую (`vi.mock('../../api/hooks', ...)`), без `QueryClientProvider`; там, где нужен реальный роутинг (`HistoryPage`, `AlertsPanel`, `OverviewPage`) — оборачиваются в `MemoryRouter`.
-- **Итого: 165 тестов, все зелёные.** 3D-сцена (Canvas/WebGL) не покрыта компонентными тестами — jsdom не рендерит WebGL; проверена вручную в браузере (Playwright-скриншоты + проверка консоли).
+- **Итого: 169 тестов, все зелёные.** 3D-сцена (Canvas/WebGL) не покрыта компонентными тестами — jsdom не рендерит WebGL; проверена вручную в браузере (Playwright-скриншоты + проверка консоли).
 - `BeamTable` (тултип, скролл) и `BeamMarkers`/`SensorMarker` (высота маркеров, наклон датчика) также не имеют отдельных компонентных тестов — правки в них проверялись вручную через Playwright (наведение на все 64 ячейки/лучи, проверка `scrollWidth`/`scrollHeight` контейнера, скриншоты).
 
 ## Следующие этапы

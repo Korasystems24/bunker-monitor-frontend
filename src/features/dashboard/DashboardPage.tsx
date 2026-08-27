@@ -42,7 +42,7 @@ export function DashboardPage() {
     return (
       <div className="p-8">
         <ErrorMessage
-          message="Не удалось загрузить список бункеров. Проверьте, запущен ли мок-сервер."
+          message="Не удалось загрузить список бункеров. Backend недоступен."
           retry={() => void refetchBunkers()}
         />
       </div>
