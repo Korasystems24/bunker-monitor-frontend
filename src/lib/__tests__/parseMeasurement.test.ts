@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseBeam, parseMeasurement } from '../parseMeasurement'
+import { hasUsableHeight, parseBeam, parseMeasurement } from '../parseMeasurement'
 import type { Beam, Measurement } from '../../types'
 
 const makeBeam = (overrides: Partial<Beam> = {}): Beam => ({
@@ -97,5 +97,15 @@ describe('parseMeasurement', () => {
     const { parsedBeams } = parseMeasurement(makeMeasurement(beams))
     expect(parsedBeams[0]?.reliable).toBe(true)
     expect(parsedBeams[1]?.reliable).toBe(false)
+  })
+})
+
+describe('hasUsableHeight', () => {
+  it('rejects height 0 even when status is reliable', () => {
+    expect(hasUsableHeight(parseBeam(makeBeam({ height: 0, status: '' })))).toBe(false)
+  })
+
+  it('accepts a positive reliable height', () => {
+    expect(hasUsableHeight(parseBeam(makeBeam({ height: 1.7, status: '' })))).toBe(true)
   })
 })

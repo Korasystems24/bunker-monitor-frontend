@@ -15,7 +15,7 @@ export function parseBeam(beam: Beam): ParsedBeam {
 export function hasUsableHeight(
   beam: ParsedBeam,
 ): beam is ParsedBeam & { height: number; reliable: true } {
-  return beam.reliable && beam.height !== null
+  return beam.reliable && beam.height !== null && beam.height > 0
 }
 
 /**

@@ -45,17 +45,17 @@ describe('VesselPanel', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument()
   })
 
-  it('derives min/max level from reliable beams, including a valid zero', () => {
+  it('derives min/max level from reliable beams and ignores height 0', () => {
     const measurement = makeMeasurement([
       makeBeam('A1', 5.0, 'Disabled'), // unreliable, excluded
-      makeBeam('A2', 0, ''), // valid zero is a real reading when status is reliable
+      makeBeam('A2', 0, ''), // no echo, not an empty bunker
       makeBeam('A3', 1.5, ''),
       makeBeam('A4', 3.0, ''),
     ])
     render(
       <VesselPanel measurement={measurement} bunkerName="Бункер 1" online={true} isLoading={false} />,
     )
-    expect(screen.getByText('0.00 м')).toBeInTheDocument()
+    expect(screen.getByText('1.50 м')).toBeInTheDocument()
     expect(screen.getByText('3.00 м')).toBeInTheDocument()
   })
 
