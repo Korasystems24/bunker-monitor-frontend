@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import type { BunkerGeometry, ParsedBeam } from '../../types'
 import { BEAM_AXES, BEAM_POSITIONS, FALLBACK_BUNKER_SHAPE } from '../../config'
 import { buildSurfaceGrid, computeCenterHeight } from '../../lib/interpolateSurface'
-import { resolveBeamXY, maxBeamRadius } from '../../lib/geometryUtils'
+import { resolveBeamXY, maxBeamRadius, maxShapeHorizontalExtent } from '../../lib/geometryUtils'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
 import { hasUsableHeight } from '../../lib/parseMeasurement'
 
@@ -39,7 +39,7 @@ export function OreSurface({ beams, geometry }: OreSurfaceProps) {
     const nPos = BEAM_POSITIONS.length
     const fallbackMaxRadius = geometry
       ? maxBeamRadius(geometry)
-      : FALLBACK_BUNKER_SHAPE.top_diameter_m / 2
+      : maxShapeHorizontalExtent(FALLBACK_BUNKER_SHAPE) / 2
 
     const heightRange = computeHeightRange(
       beams.filter(hasUsableHeight).map((b) => b.height),

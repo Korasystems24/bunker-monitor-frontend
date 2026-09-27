@@ -3,7 +3,7 @@ import { Html } from '@react-three/drei'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { BunkerGeometry, ParsedBeam } from '../../types'
 import { BEAM_AXES, BEAM_POSITIONS, FALLBACK_BUNKER_SHAPE } from '../../config'
-import { resolveBeamXY, maxBeamRadius } from '../../lib/geometryUtils'
+import { resolveBeamXY, maxBeamRadius, maxShapeHorizontalExtent } from '../../lib/geometryUtils'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
 import { buildSurfaceGrid } from '../../lib/interpolateSurface'
 import { BeamTooltip } from '../dashboard/BeamTooltip'
@@ -41,7 +41,7 @@ export function BeamMarkers({ beams, geometry, selectedBeam, onSelectBeam }: Bea
 
   const fallbackMaxRadius = geometry
     ? maxBeamRadius(geometry)
-    : FALLBACK_BUNKER_SHAPE.top_diameter_m / 2
+    : maxShapeHorizontalExtent(FALLBACK_BUNKER_SHAPE) / 2
 
   // Same interpolated grid the ore surface itself is built from — so an
   // unreliable beam's marker/label sits on the surface right beneath it

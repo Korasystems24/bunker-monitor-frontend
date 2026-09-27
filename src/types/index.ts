@@ -79,18 +79,46 @@ export interface BeamGeometryPoint {
   z: number
 }
 
+// Production vessel model (from the УЛМ-3D Configurator): a rectangular-footprint
+// tank tapering through three cross-section levels (bottom → middle → top), each with
+// its own independent width along X and Y (not a shape of revolution — X and Y differ),
+// plus an overall vessel height (may exceed `top_height_m`: a straight vertical section
+// — e.g. a mounting collar/headspace above the top cross-section — keeps `top_x_m`/
+// `top_y_m` up to `vessel_height_m`) and the footprint's rotation around the vertical
+// (OZ) axis, always a multiple of 90°. All values come from the Configurator via
+// /geometry — the frontend never computes or hardcodes them (see README, open question №5).
 export interface BunkerShape {
-  type: 'truncated_cone'
-  top_diameter_m: number
-  bottom_diameter_m: number
-  height_m: number
+  type: 'tiered_rect'
+  bottom_x_m: number
+  bottom_y_m: number
+  bottom_height_m: number
+  middle_x_m: number
+  middle_y_m: number
+  middle_height_m: number
+  top_x_m: number
+  top_y_m: number
+  top_height_m: number
+  vessel_height_m: number
+  // Reference full-vessel capacity from the Configurator — informational only,
+  // the frontend keeps using measurement.volume, it does not derive volume from this.
+  full_volume_m3: number
+  rotation_deg: number
 }
 
+// Sensor (levelmeter) placement + orientation from the Configurator. Resolves the
+// former open question about tilt azimuth (README, old open question №8): instead of
+// a single tilt magnitude with no direction, the Configurator exports the boresight's
+// tilt off true vertical already decomposed into the tank's own X and Y axes —
+// `tilt_x_deg` (lean in the tank's X/height plane) and `tilt_y_deg` (lean in the
+// tank's Y/height plane). Together they fully describe tilt magnitude *and* direction
+// (equivalent to magnitude+azimuth, just expressed in Cartesian components), so the
+// frontend no longer needs to guess/approximate a missing azimuth.
 export interface SensorPlacement {
   x: number
   y: number
   z: number
-  tilt_deg: number
+  tilt_x_deg: number
+  tilt_y_deg: number
 }
 
 export interface BunkerGeometry {

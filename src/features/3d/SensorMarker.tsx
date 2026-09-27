@@ -1,5 +1,5 @@
-import * as THREE from 'three'
 import { Line } from '@react-three/drei'
+import { sensorBoresightDirection } from '../../lib/geometryUtils'
 import type { SensorPlacement } from '../../types'
 
 interface SensorMarkerProps {
@@ -12,12 +12,27 @@ const HEAD_HEIGHT = 0.26
 
 /**
  * Renders the УЛМ-3D-64 sensor head at its real mounting position (from
- * /geometry's `sensor`), plus its boresight tilted by `tilt_deg` off true
- * vertical (dashed reference line) — the API only gives tilt magnitude, not
- * an azimuth for the tilt direction, so it's applied as a rotation around Z.
+ * /geometry's `sensor`), plus its boresight tilted off true vertical (dashed
+ * reference line). `tilt_x_deg`/`tilt_y_deg` are dual-axis inclinometer
+ * readings — each is the angle between the boresight and true vertical *as
+ * seen when projected onto that one axis's vertical plane* (X/height or
+ * Y/height), independent of the other. That means the boresight direction
+ * must be reconstructed from `tan(tilt_x_deg)`/`tan(tilt_y_deg)` directly
+ * (`direction ∝ (tan(tiltX), -1, tan(tiltY))` in world coords) — NOT by
+ * applying the two angles as two sequential Euler rotations. Two sequential
+ * rotations compound (the second is applied to the vector already tilted by
+ * the first), so it reproduces neither angle correctly once both are
+ * non-trivial, and can even flip the effective sign of one axis — that was
+ * the earlier bug here (boresight leaning the wrong way).
  */
 export function SensorMarker({ sensor, boresightLength }: SensorMarkerProps) {
-  const tiltRad = THREE.MathUtils.degToRad(sensor.tilt_deg)
+  const dir = sensorBoresightDirection(sensor)
+  // World Y is height, world X/Z are the tank's X/Y (same [x, z, y] swap as `position` below).
+  const boresightEnd: [number, number, number] = [
+    dir.x * boresightLength,
+    dir.z * boresightLength,
+    dir.y * boresightLength,
+  ]
   const position: [number, number, number] = [sensor.x, sensor.z, sensor.y]
 
   return (
@@ -40,17 +55,8 @@ export function SensorMarker({ sensor, boresightLength }: SensorMarkerProps) {
         gapSize={0.06}
       />
 
-      {/* Actual boresight, tilted by tilt_deg off vertical */}
-      <group rotation={[0, 0, tiltRad]}>
-        <Line
-          points={[
-            [0, 0, 0],
-            [0, -boresightLength, 0],
-          ]}
-          color="#f59e0b"
-          lineWidth={2}
-        />
-      </group>
+      {/* Actual boresight, tilted off vertical by both tilt components */}
+      <Line points={[[0, 0, 0], boresightEnd]} color="#f59e0b" lineWidth={2} />
     </group>
   )
 }

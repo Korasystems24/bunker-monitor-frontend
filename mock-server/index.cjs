@@ -17,18 +17,87 @@ const AXES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 const POSITIONS = [1, 2, 3, 4, 5, 6, 7, 8]
 const AXIS_AZIMUTHS_DEG = { A: 0, B: 45, C: 90, D: 135, E: 180, F: 225, G: 270, H: 315 }
 const RADIUS_FRACTIONS = [0.1, 0.22, 0.34, 0.46, 0.58, 0.70, 0.82, 0.95]
-const BUNKER_RADIUS_M = 3.5
-const BUNKER_HEIGHT_M = 8.0
-const SENSOR_Z = BUNKER_HEIGHT_M + 0.5
 const DENSITY_T_PER_M3 = 2.3 // ore density, t/m³
 
+// Production vessel model ("tiered_rect", from the Configurator): rectangular
+// footprint tapering through bottom → middle → top cross-sections (independent
+// X/Y widths per level) + overall vessel height + footprint rotation (multiple
+// of 90°). See src/types/index.ts (BunkerShape) and API.md for the full contract.
+const BUNKER_SHAPES = {
+  'bunker-1': {
+    type: 'tiered_rect',
+    bottom_x_m: 1.8,
+    bottom_y_m: 2.4,
+    bottom_height_m: 0,
+    middle_x_m: 2.4,
+    middle_y_m: 2.4,
+    middle_height_m: 1.4,
+    top_x_m: 3.2,
+    top_y_m: 3.2,
+    top_height_m: 2.0,
+    vessel_height_m: 3.4,
+    full_volume_m3: 23.85,
+    rotation_deg: 0,
+  },
+  'bunker-2': {
+    type: 'tiered_rect',
+    bottom_x_m: 2.2,
+    bottom_y_m: 2.6,
+    bottom_height_m: 0,
+    middle_x_m: 3.4,
+    middle_y_m: 3.0,
+    middle_height_m: 1.8,
+    top_x_m: 4.6,
+    top_y_m: 4.0,
+    top_height_m: 3.0,
+    vessel_height_m: 4.6,
+    full_volume_m3: 41.2,
+    rotation_deg: 90,
+  },
+}
+
+function shapeForBunker(bunkerId) {
+  return BUNKER_SHAPES[bunkerId] || BUNKER_SHAPES['bunker-1']
+}
+
+// Levelmeter (sensor) placement + orientation, from the Configurator's "Levelmeters"
+// tab. tilt_x_deg/tilt_y_deg are the boresight's tilt off true vertical, already
+// decomposed into the tank's own X and Y axes (incl_x/incl_y in the Configurator UI) —
+// this fully describes tilt direction, not just magnitude (resolves the former open
+// question about a missing tilt azimuth). bunker-1 mirrors the real UMB01 unit
+// (off-center mount, slightly below the roof line); other bunkers default to centered,
+// untilted.
+const SENSOR_PLACEMENTS = {
+  'bunker-1': { x: 1.2, y: -1.2, z: 3.2, tilt_x_deg: -41.6, tilt_y_deg: 41.3 },
+}
+
+function sensorForBunker(bunkerId, shape) {
+  return (
+    SENSOR_PLACEMENTS[bunkerId] || {
+      x: 0,
+      y: 0,
+      z: shape.vessel_height_m + 0.5,
+      tilt_x_deg: 0,
+      tilt_y_deg: 0,
+    }
+  )
+}
+
+// Radius used to lay out the 64-beam radial grid inside the tank footprint —
+// kept a bit inside the narrowest top wall so beams land inside the envelope.
+function beamLayoutRadius(shape) {
+  return (Math.min(shape.top_x_m, shape.top_y_m) / 2) * 0.92
+}
+
 function buildGeometry(bunkerId) {
+  const shape = shapeForBunker(bunkerId)
+  const radius = beamLayoutRadius(shape)
   const beams = []
   for (const axis of AXES) {
     const azimuthDeg = AXIS_AZIMUTHS_DEG[axis]
     const azimuthRad = (azimuthDeg * Math.PI) / 180
     for (const pos of POSITIONS) {
-      const r = BUNKER_RADIUS_M * RADIUS_FRACTIONS[pos - 1]
+      const r = radius * RADIUS_FRACTIONS[pos - 1]
       const x = parseFloat((r * Math.cos(azimuthRad)).toFixed(4))
       const y = parseFloat((r * Math.sin(azimuthRad)).toFixed(4))
       beams.push({ beam_name: `${axis}${pos}`, axis, position: pos, x, y, z: 0 })
@@ -36,13 +105,8 @@ function buildGeometry(bunkerId) {
   }
   return {
     bunker_id: bunkerId,
-    shape: {
-      type: 'truncated_cone',
-      top_diameter_m: BUNKER_RADIUS_M * 2,
-      bottom_diameter_m: BUNKER_RADIUS_M * 1.2,
-      height_m: BUNKER_HEIGHT_M,
-    },
-    sensor: { x: 0, y: 0, z: SENSOR_Z, tilt_deg: 0 },
+    shape,
+    sensor: sensorForBunker(bunkerId, shape),
     beams,
   }
 }
@@ -57,8 +121,8 @@ const KNOWN_FLAGS = [
 // State: slowly drifting base level per bunker, plus a slowly accreting sidewall
 // buildup on one axis (for demo purposes — real accretion is what /buildup should detect)
 const bunkerState = {
-  'bunker-1': { baseLevel: 3.2, driftDir: 1, lastId: 100, buildupAxis: 'C', buildupLevel: 0 },
-  'bunker-2': { baseLevel: 5.1, driftDir: -1, lastId: 200, buildupAxis: 'F', buildupLevel: 0.4 },
+  'bunker-1': { baseLevel: 2.4, driftDir: 1, lastId: 100, buildupAxis: 'C', buildupLevel: 0 },
+  'bunker-2': { baseLevel: 3.6, driftDir: -1, lastId: 200, buildupAxis: 'F', buildupLevel: 0.4 },
 }
 
 function pickStatus(axis, position) {
@@ -116,9 +180,12 @@ function generateMeasurement(bunkerId) {
   const state = bunkerState[bunkerId]
   if (!state) return null
 
-  // Drift base level
+  // Drift base level, capped a bit below the vessel's own height so simulated
+  // ore stays inside the tank envelope
+  const shape = shapeForBunker(bunkerId)
+  const maxBaseLevel = shape.vessel_height_m * 0.85
   state.baseLevel += state.driftDir * (Math.random() * 0.03)
-  if (state.baseLevel > 6.5) state.driftDir = -1
+  if (state.baseLevel > maxBaseLevel) state.driftDir = -1
   if (state.baseLevel < 1.0) state.driftDir = 1
 
   // Slowly accrete sidewall buildup on one axis; occasionally "falls off" (cleared)

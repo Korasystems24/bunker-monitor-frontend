@@ -4,6 +4,7 @@ import { OrbitControls } from '@react-three/drei'
 import type { BunkerGeometry, Measurement } from '../../types'
 import { hasUsableHeight, parseBeam } from '../../lib/parseMeasurement'
 import { computeHeightRange } from '../../lib/colorScale'
+import { maxShapeHorizontalExtent } from '../../lib/geometryUtils'
 import { FALLBACK_BUNKER_SHAPE, FALLBACK_SENSOR } from '../../config'
 import { BunkerShape } from './BunkerShape'
 import { OreSurface } from './OreSurface'
@@ -40,7 +41,8 @@ export function Scene3DPanel({
     [parsedBeams],
   )
 
-  const camDist = Math.max(shape.top_diameter_m, shape.bottom_diameter_m) * 1.4
+  const maxExtent = maxShapeHorizontalExtent(shape)
+  const camDist = maxExtent * 1.4
 
   return (
     <div className="flex h-full min-h-0 flex-col rounded-lg border border-surface-3 bg-surface-1">
@@ -63,7 +65,7 @@ export function Scene3DPanel({
             Нет данных о лучах
           </p>
         ) : (
-          <Canvas camera={{ position: [camDist, shape.height_m * 1.1, camDist], fov: 45 }}>
+          <Canvas camera={{ position: [camDist, shape.vessel_height_m * 1.1, camDist], fov: 45 }}>
             <color attach="background" args={['#0b1220']} />
             <ambientLight intensity={0.7} />
             <directionalLight position={[5, 10, 5]} intensity={0.9} />
@@ -76,19 +78,12 @@ export function Scene3DPanel({
               selectedBeam={selectedBeam}
               onSelectBeam={onSelectBeam}
             />
-            <SensorMarker sensor={sensor} boresightLength={shape.height_m * 0.35} />
+            <SensorMarker sensor={sensor} boresightLength={shape.vessel_height_m * 0.35} />
 
-            <gridHelper
-              args={[
-                Math.max(shape.top_diameter_m, shape.bottom_diameter_m) * 2,
-                10,
-                '#1e293b',
-                '#1e293b',
-              ]}
-            />
+            <gridHelper args={[maxExtent * 2, 10, '#1e293b', '#1e293b']} />
             <OrbitControls
               makeDefault
-              target={[0, shape.height_m / 2, 0]}
+              target={[0, shape.vessel_height_m / 2, 0]}
               minDistance={1.5}
               maxDistance={camDist * 4}
             />

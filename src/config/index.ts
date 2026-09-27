@@ -45,21 +45,36 @@ export const FALLBACK_GEOMETRY = {
   radiusFractions: [0.1, 0.22, 0.34, 0.46, 0.58, 0.7, 0.82, 0.95],
 }
 
-// Fallback bunker shape (3D view) — used only when /geometry is unavailable, NOT for production
+// Fallback bunker shape (3D view) — used only when /geometry is unavailable, NOT for
+// production. Mirrors the production "tiered_rect" vessel model (see types/index.ts
+// BunkerShape) so the fallback renders with the same geometry logic as a real
+// Configurator response; the concrete numbers below are just a dev placeholder.
 export const FALLBACK_BUNKER_SHAPE = {
-  type: 'truncated_cone',
-  top_diameter_m: 7,
-  bottom_diameter_m: 4.2,
-  height_m: 8,
+  type: 'tiered_rect',
+  bottom_x_m: 1.8,
+  bottom_y_m: 2.4,
+  bottom_height_m: 0,
+  middle_x_m: 2.4,
+  middle_y_m: 2.4,
+  middle_height_m: 1.4,
+  top_x_m: 3.2,
+  top_y_m: 3.2,
+  top_height_m: 2.0,
+  vessel_height_m: 3.4,
+  full_volume_m3: 23.85,
+  rotation_deg: 0,
 } as const
 
-// Fallback sensor placement (3D view) — centered above the rim, no tilt.
-// Used only when /geometry is unavailable, NOT for production.
+// Fallback sensor placement (3D view) — mirrors the real UMB01 levelmeter mounting
+// from the Configurator (off-center position, mounted slightly below the roof line,
+// with a real measured tilt decomposed into tilt_x_deg/tilt_y_deg). Used only when
+// /geometry is unavailable, NOT for production.
 export const FALLBACK_SENSOR = {
-  x: 0,
-  y: 0,
-  z: FALLBACK_BUNKER_SHAPE.height_m + 0.5,
-  tilt_deg: 0,
+  x: 1.2,
+  y: -1.2,
+  z: 3.2,
+  tilt_x_deg: -41.6,
+  tilt_y_deg: 41.3,
 } as const
 
 // Beam degradation alert threshold — assumption pending customer confirmation (see README).
