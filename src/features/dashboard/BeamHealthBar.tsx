@@ -4,13 +4,17 @@ import { summarizeBeamHealth } from '../../lib/parseMeasurement'
 
 interface BeamHealthBarProps {
   measurement: Measurement | undefined
+  showAllExceptDisabled?: boolean
 }
 
-export function BeamHealthBar({ measurement }: BeamHealthBarProps) {
+export function BeamHealthBar({
+  measurement,
+  showAllExceptDisabled = false,
+}: BeamHealthBarProps) {
   const stats = useMemo(() => {
     if (!measurement) return null
-    return summarizeBeamHealth(measurement.beams)
-  }, [measurement])
+    return summarizeBeamHealth(measurement.beams, { showAllExceptDisabled })
+  }, [measurement, showAllExceptDisabled])
 
   if (!stats) return null
 

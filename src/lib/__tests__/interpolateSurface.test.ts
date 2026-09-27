@@ -56,6 +56,18 @@ describe('buildSurfaceGrid', () => {
     })
   })
 
+  it('uses a NotUsed height when showAllExceptDisabled is set, and still skips Disabled', () => {
+    const beams = makeFullGrid({
+      B4: makeBeam('B4', 9, 'NotUsed, WeakSignal'),
+      C4: makeBeam('C4', 8, 'Disabled'),
+    })
+    const grid = buildSurfaceGrid(beams, { showAllExceptDisabled: true })
+    expect(grid[1][3].height).toBe(9)
+    expect(grid[1][3].interpolated).toBe(false)
+    expect(grid[2][3].interpolated).toBe(true)
+    expect(grid[2][3].height).not.toBe(8)
+  })
+
   it('does not let an unreliable height (e.g. 5.0) pull the interpolated value toward it', () => {
     // A misleading raw height on the unreliable beam must be ignored entirely
     const beams = makeFullGrid({ B4: makeBeam('B4', 999, 'Disabled') })

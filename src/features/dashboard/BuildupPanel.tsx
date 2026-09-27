@@ -6,9 +6,14 @@ import { Skeleton } from '../../components/Skeleton'
 interface BuildupPanelProps {
   analysis: BuildupAnalysis | undefined
   isLoading: boolean
+  countsAllExceptDisabled?: boolean
 }
 
-export function BuildupPanel({ analysis, isLoading }: BuildupPanelProps) {
+export function BuildupPanel({
+  analysis,
+  isLoading,
+  countsAllExceptDisabled = false,
+}: BuildupPanelProps) {
   const zones = analysis ? sortZonesBySeverity(analysis.zones) : []
   const suspectCount = zones.filter((z) => z.severity !== 'none').length
 
@@ -70,6 +75,8 @@ export function BuildupPanel({ analysis, isLoading }: BuildupPanelProps) {
       <p className="border-t border-surface-3 px-4 py-2 text-[11px] leading-snug text-slate-600">
         Критерий детекции — предварительный (аномалия высоты во внешних позициях спицы
         относительно профиля оси), уточняется с заказчиком. Порог задаёт бэкенд, не фронт.
+        {countsAllExceptDisabled &&
+          ' В расчёт входят все лучи замера, кроме статуса Disabled.'}
       </p>
     </div>
   )

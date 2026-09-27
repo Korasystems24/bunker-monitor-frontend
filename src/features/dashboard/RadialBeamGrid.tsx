@@ -8,7 +8,7 @@ import { resolveBeamXY, maxBeamRadius } from '../../lib/geometryUtils'
 import { severitySvgColor, severityIcon, severityLabel } from '../../lib/buildupUtils'
 import { BeamTooltip } from './BeamTooltip'
 import { HeightLegend } from '../../components/HeightLegend'
-import { hasUsableHeight } from '../../lib/parseMeasurement'
+import { hasDisplayHeight, isBeamDisabled } from '../../lib/parseMeasurement'
 
 interface RadialBeamGridProps {
   beams: ParsedBeam[]
@@ -16,6 +16,7 @@ interface RadialBeamGridProps {
   selectedBeam: string | null
   onSelectBeam: (name: string | null) => void
   buildupZones?: BuildupZone[]
+  showAllExceptDisabled?: boolean
 }
 
 const SVG_SIZE = 440
@@ -57,6 +58,7 @@ export function RadialBeamGrid({
   selectedBeam,
   onSelectBeam,
   buildupZones = [],
+  showAllExceptDisabled = false,
 }: RadialBeamGridProps) {
   const [hoveredBeam, setHoveredBeam] = useState<string | null>(null)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
@@ -75,9 +77,11 @@ export function RadialBeamGrid({
   }, [buildupZones])
 
   const heightRange = useMemo(() => {
-    const heights = beams.filter(hasUsableHeight).map((b) => b.height)
+    const heights = beams
+      .filter((beam) => hasDisplayHeight(beam, showAllExceptDisabled))
+      .map((b) => b.height)
     return computeHeightRange(heights)
-  }, [beams])
+  }, [beams, showAllExceptDisabled])
 
   const hoveredBeamData = hoveredBeam ? beamMap.get(hoveredBeam) : null
 
@@ -204,15 +208,16 @@ export function RadialBeamGrid({
             BEAM_POSITIONS.map((pos) => {
               const beamName = `${axis}${pos}`
               const beam = beamMap.get(beamName)
+              if (showAllExceptDisabled && beam && isBeamDisabled(beam)) return null
+
               const { x, y } = beamToSvgCoords(axis, pos, geometry)
               const isSelected = selectedBeam === beamName
               const isHovered = hoveredBeam === beamName
               const isOuter = pos >= 6
-
               let fillColor: string
               if (!beam) {
                 fillColor = 'hsl(220, 10%, 25%)'
-              } else if (!hasUsableHeight(beam)) {
+              } else if (!hasDisplayHeight(beam, showAllExceptDisabled)) {
                 fillColor = 'hsl(220, 10%, 30%)'
               } else {
                 const norm =
@@ -247,16 +252,26 @@ export function RadialBeamGrid({
                     fill={fillColor}
                     stroke={isSelected ? '#60a5fa' : isOuter ? '#334155' : 'none'}
                     strokeWidth={isSelected ? 2 : 1}
-                    opacity={beam && !beam.reliable ? 0.45 : 1}
+                    opacity={
+                      beam && !beam.reliable && !hasDisplayHeight(beam, showAllExceptDisabled)
+                        ? 0.45
+                        : 1
+                    }
                     className="cursor-pointer transition-all duration-100"
                     onMouseMove={(e) => handleMouseMove(e, beamName)}
                     onMouseLeave={() => setHoveredBeam(null)}
                     onClick={() => onSelectBeam(isSelected ? null : beamName)}
-                    aria-label={`${beamName}: ${beam ? formatLevel(beam.reliable ? beam.height : null) : 'нет данных'}`}
+                    aria-label={`${beamName}: ${
+                      beam && hasDisplayHeight(beam, showAllExceptDisabled)
+                        ? formatLevel(beam.height)
+                        : 'нет данных'
+                    }`}
                   />
 
                   {/* Height label (only for hovered or selected) */}
-                  {(isHovered || isSelected) && beam && hasUsableHeight(beam) && (
+                  {(isHovered || isSelected) &&
+                    beam &&
+                    hasDisplayHeight(beam, showAllExceptDisabled) && (
                     <text
                       x={x}
                       y={y - radius - 4}
@@ -288,7 +303,10 @@ export function RadialBeamGrid({
             zIndex: 50,
           }}
         >
-          <BeamTooltip beam={hoveredBeamData} />
+          <BeamTooltip
+            beam={hoveredBeamData}
+            showHeight={showAllExceptDisabled && !isBeamDisabled(hoveredBeamData)}
+          />
         </div>
       )}
 

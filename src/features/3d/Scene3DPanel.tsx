@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import type { BunkerGeometry, Measurement } from '../../types'
-import { hasUsableHeight, parseBeam } from '../../lib/parseMeasurement'
+import { hasDisplayHeight, parseBeam } from '../../lib/parseMeasurement'
 import { computeHeightRange } from '../../lib/colorScale'
 import { maxShapeHorizontalExtent } from '../../lib/geometryUtils'
 import { FALLBACK_BUNKER_SHAPE, FALLBACK_SENSOR } from '../../config'
@@ -19,6 +19,7 @@ interface Scene3DPanelProps {
   isLoading: boolean
   selectedBeam: string | null
   onSelectBeam: (name: string | null) => void
+  showAllExceptDisabled?: boolean
 }
 
 export function Scene3DPanel({
@@ -27,6 +28,7 @@ export function Scene3DPanel({
   isLoading,
   selectedBeam,
   onSelectBeam,
+  showAllExceptDisabled = false,
 }: Scene3DPanelProps) {
   const parsedBeams = useMemo(() => (measurement?.beams ?? []).map(parseBeam), [measurement])
 
@@ -36,9 +38,11 @@ export function Scene3DPanel({
   const heightRange = useMemo(
     () =>
       computeHeightRange(
-        parsedBeams.filter(hasUsableHeight).map((b) => b.height),
+        parsedBeams
+          .filter((beam) => hasDisplayHeight(beam, showAllExceptDisabled))
+          .map((b) => b.height),
       ),
-    [parsedBeams],
+    [parsedBeams, showAllExceptDisabled],
   )
 
   const maxExtent = maxShapeHorizontalExtent(shape)
@@ -71,12 +75,17 @@ export function Scene3DPanel({
             <directionalLight position={[5, 10, 5]} intensity={0.9} />
 
             <BunkerShape shape={shape} />
-            <OreSurface beams={parsedBeams} geometry={geometry} />
+            <OreSurface
+              beams={parsedBeams}
+              geometry={geometry}
+              showAllExceptDisabled={showAllExceptDisabled}
+            />
             <BeamMarkers
               beams={parsedBeams}
               geometry={geometry}
               selectedBeam={selectedBeam}
               onSelectBeam={onSelectBeam}
+              showAllExceptDisabled={showAllExceptDisabled}
             />
             <SensorMarker sensor={sensor} boresightLength={shape.vessel_height_m * 0.35} />
 

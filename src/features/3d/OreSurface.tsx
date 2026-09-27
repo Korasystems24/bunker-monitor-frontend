@@ -5,11 +5,12 @@ import { BEAM_AXES, BEAM_POSITIONS, FALLBACK_BUNKER_SHAPE } from '../../config'
 import { buildSurfaceGrid, computeCenterHeight } from '../../lib/interpolateSurface'
 import { resolveBeamXY, maxBeamRadius, maxShapeHorizontalExtent } from '../../lib/geometryUtils'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
-import { hasUsableHeight } from '../../lib/parseMeasurement'
+import { hasDisplayHeight } from '../../lib/parseMeasurement'
 
 interface OreSurfaceProps {
   beams: ParsedBeam[]
   geometry: BunkerGeometry | undefined
+  showAllExceptDisabled?: boolean
 }
 
 const colorHelper = new THREE.Color()
@@ -27,13 +28,17 @@ function hslToRgb(hsl: string): [number, number, number] {
  * centre to the innermost ring, then a quad strip between each pair of
  * consecutive position rings, wrapping around all 8 axes.
  */
-export function OreSurface({ beams, geometry }: OreSurfaceProps) {
+export function OreSurface({
+  beams,
+  geometry,
+  showAllExceptDisabled = false,
+}: OreSurfaceProps) {
   const previousGeometryRef = useRef<THREE.BufferGeometry | null>(null)
 
   const bufferGeometry = useMemo(() => {
     previousGeometryRef.current?.dispose()
 
-    const grid = buildSurfaceGrid(beams)
+    const grid = buildSurfaceGrid(beams, { showAllExceptDisabled })
     const centerHeight = computeCenterHeight(grid)
     const nAxes = BEAM_AXES.length
     const nPos = BEAM_POSITIONS.length
@@ -42,7 +47,7 @@ export function OreSurface({ beams, geometry }: OreSurfaceProps) {
       : maxShapeHorizontalExtent(FALLBACK_BUNKER_SHAPE) / 2
 
     const heightRange = computeHeightRange(
-      beams.filter(hasUsableHeight).map((b) => b.height),
+      beams.filter((beam) => hasDisplayHeight(beam, showAllExceptDisabled)).map((b) => b.height),
     )
 
     const vertexCount = 1 + nAxes * nPos
@@ -101,7 +106,7 @@ export function OreSurface({ beams, geometry }: OreSurfaceProps) {
 
     previousGeometryRef.current = geom
     return geom
-  }, [beams, geometry])
+  }, [beams, geometry, showAllExceptDisabled])
 
   useEffect(() => () => previousGeometryRef.current?.dispose(), [])
 

@@ -3,9 +3,12 @@ import { formatLevel } from '../../lib/formatters'
 
 interface BeamTooltipProps {
   beam: ParsedBeam
+  /** Show the raw height even when the beam is not marked reliable. */
+  showHeight?: boolean
 }
 
-export function BeamTooltip({ beam }: BeamTooltipProps) {
+export function BeamTooltip({ beam, showHeight = false }: BeamTooltipProps) {
+  const heightVisible = showHeight || beam.reliable
   return (
     <div className="pointer-events-none z-50 w-52 rounded-lg border border-surface-3 bg-surface-1 p-3 shadow-xl text-xs">
       <div className="mb-2 flex items-center justify-between">
@@ -21,7 +24,7 @@ export function BeamTooltip({ beam }: BeamTooltipProps) {
       <div className="mb-2">
         <span className="text-slate-500">Высота: </span>
         <span className="font-mono text-slate-200">
-          {beam.reliable ? formatLevel(beam.height) : '—'}
+          {heightVisible ? formatLevel(beam.height) : '—'}
         </span>
       </div>
       {beam.statusFlags.length > 0 && (

@@ -1,6 +1,11 @@
 import type { ParsedBeam } from '../types'
 import { BEAM_AXES, BEAM_POSITIONS } from '../config'
-import { hasUsableHeight } from './parseMeasurement'
+import { hasDisplayHeight } from './parseMeasurement'
+
+export interface SurfaceGridOptions {
+  /** Paint every non-disabled positive height, not only reliable beams. */
+  showAllExceptDisabled?: boolean
+}
 
 export interface SurfaceGridCell {
   axis: string
@@ -23,7 +28,11 @@ export interface SurfaceGridCell {
  * remain empty after all passes (e.g. an entire axis disabled) fall back to the
  * average of all reliable heights in the measurement.
  */
-export function buildSurfaceGrid(beams: ParsedBeam[]): SurfaceGridCell[][] {
+export function buildSurfaceGrid(
+  beams: ParsedBeam[],
+  options: SurfaceGridOptions = {},
+): SurfaceGridCell[][] {
+  const showAllExceptDisabled = options.showAllExceptDisabled ?? false
   const beamMap = new Map<string, ParsedBeam>()
   beams.forEach((b) => beamMap.set(b.beam_name, b))
 
@@ -33,13 +42,13 @@ export function buildSurfaceGrid(beams: ParsedBeam[]): SurfaceGridCell[][] {
   let heights: number[][] = BEAM_AXES.map((axis) =>
     BEAM_POSITIONS.map((position) => {
       const beam = beamMap.get(`${axis}${position}`)
-      return beam && hasUsableHeight(beam) ? beam.height : 0
+      return beam && hasDisplayHeight(beam, showAllExceptDisabled) ? beam.height : 0
     }),
   )
   let known: boolean[][] = BEAM_AXES.map((axis) =>
     BEAM_POSITIONS.map((position) => {
       const beam = beamMap.get(`${axis}${position}`)
-      return Boolean(beam && hasUsableHeight(beam))
+      return Boolean(beam && hasDisplayHeight(beam, showAllExceptDisabled))
     }),
   )
   const initiallyKnown = known.map((row) => [...row])

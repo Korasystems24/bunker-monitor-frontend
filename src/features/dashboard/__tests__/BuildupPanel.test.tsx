@@ -59,6 +59,12 @@ describe('BuildupPanel', () => {
     expect(screen.getByText('Неизв.: future-flag')).toBeInTheDocument()
   })
 
+  it('notes that every beam except Disabled is included when that mode is on', () => {
+    const analysis = makeAnalysis([zone('A', 'none')])
+    render(<BuildupPanel analysis={analysis} isLoading={false} countsAllExceptDisabled />)
+    expect(screen.getByText(/кроме статуса Disabled/)).toBeInTheDocument()
+  })
+
   it('shows an empty message when there is no data at all', () => {
     render(<BuildupPanel analysis={undefined} isLoading={false} />)
     expect(screen.getByText('Нет данных для анализа')).toBeInTheDocument()

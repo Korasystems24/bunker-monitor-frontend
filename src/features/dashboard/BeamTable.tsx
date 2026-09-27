@@ -4,13 +4,14 @@ import type { ParsedBeam } from '../../types'
 import { BEAM_AXES, BEAM_POSITIONS, OUTER_ZONE_POSITION_THRESHOLD } from '../../config'
 import { heightToColor, computeHeightRange } from '../../lib/colorScale'
 import { formatLevel } from '../../lib/formatters'
-import { hasUsableHeight } from '../../lib/parseMeasurement'
+import { hasDisplayHeight, isBeamDisabled } from '../../lib/parseMeasurement'
 import { BeamTooltip } from './BeamTooltip'
 
 interface BeamTableProps {
   beams: ParsedBeam[]
   selectedBeam: string | null
   onSelectBeam: (name: string | null) => void
+  showAllExceptDisabled?: boolean
 }
 
 // Generous upper-bound estimates of BeamTooltip's rendered size (fixed w-52 width;
@@ -20,7 +21,12 @@ interface BeamTableProps {
 const TOOLTIP_WIDTH = 208
 const TOOLTIP_HEIGHT = 170
 
-export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps) {
+export function BeamTable({
+  beams,
+  selectedBeam,
+  onSelectBeam,
+  showAllExceptDisabled = false,
+}: BeamTableProps) {
   const [hoveredBeam, setHoveredBeam] = useState<string | null>(null)
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties | null>(null)
 
@@ -31,14 +37,16 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
   }, [beams])
 
   const heightRange = useMemo(() => {
-    const heights = beams.filter(hasUsableHeight).map((b) => b.height)
+    const heights = beams
+      .filter((beam) => hasDisplayHeight(beam, showAllExceptDisabled))
+      .map((b) => b.height)
     return computeHeightRange(heights)
-  }, [beams])
+  }, [beams, showAllExceptDisabled])
 
   const hoveredBeamData = hoveredBeam ? beamMap.get(hoveredBeam) : null
 
   function cellColor(beam: ParsedBeam | undefined): string {
-    if (!beam || !hasUsableHeight(beam)) return 'transparent'
+    if (!beam || !hasDisplayHeight(beam, showAllExceptDisabled)) return 'transparent'
     const norm =
       heightRange.max === heightRange.min
         ? 0.5
@@ -75,6 +83,11 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
                 const beamName = `${axis}${pos}`
                 const beam = beamMap.get(beamName)
                 const isSelected = selectedBeam === beamName
+                const hiddenDisabled = Boolean(
+                  showAllExceptDisabled && beam && isBeamDisabled(beam),
+                )
+                const displayHeight =
+                  beam && hasDisplayHeight(beam, showAllExceptDisabled) ? beam.height : null
                 const bg = cellColor(beam)
 
                 return (
@@ -104,11 +117,13 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
                     }}
                     onMouseLeave={() => setHoveredBeam(null)}
                     onClick={() => onSelectBeam(isSelected ? null : beamName)}
-                    aria-label={`${beamName}: ${beam ? formatLevel(beam.reliable ? beam.height : null) : 'нет данных'}`}
+                    aria-label={`${beamName}: ${
+                      hiddenDisabled || !beam ? 'нет данных' : formatLevel(displayHeight)
+                    }`}
                   >
-                    {!beam ? (
+                    {!beam || hiddenDisabled ? (
                       <span className="text-slate-700">—</span>
-                    ) : !hasUsableHeight(beam) ? (
+                    ) : displayHeight == null ? (
                       // Status icon (not just color) — important for colorblind users
                       <span
                         className="inline-flex items-center justify-center text-slate-600 opacity-50"
@@ -125,7 +140,7 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
                           textShadow: '0 1px 2px rgba(0,0,0,0.8)',
                         }}
                       >
-                        {beam.height.toFixed(2)}
+                        {displayHeight.toFixed(2)}
                       </span>
                     )}
                   </td>
@@ -141,7 +156,12 @@ export function BeamTable({ beams, selectedBeam, onSelectBeam }: BeamTableProps)
         tooltipStyle &&
         createPortal(
           <div style={tooltipStyle}>
-            <BeamTooltip beam={hoveredBeamData} />
+            <BeamTooltip
+              beam={hoveredBeamData}
+              showHeight={
+                showAllExceptDisabled && !isBeamDisabled(hoveredBeamData)
+              }
+            />
           </div>,
           document.body,
         )}

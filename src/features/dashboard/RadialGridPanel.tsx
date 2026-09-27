@@ -12,6 +12,7 @@ interface RadialGridPanelProps {
   selectedBeam: string | null
   onSelectBeam: (name: string | null) => void
   buildupZones?: BuildupZone[]
+  showAllExceptDisabled?: boolean
 }
 
 export function RadialGridPanel({
@@ -21,6 +22,7 @@ export function RadialGridPanel({
   selectedBeam,
   onSelectBeam,
   buildupZones,
+  showAllExceptDisabled = false,
 }: RadialGridPanelProps) {
   const parsedBeams = useMemo(() => (measurement?.beams ?? []).map(parseBeam), [measurement])
 
@@ -49,6 +51,7 @@ export function RadialGridPanel({
             selectedBeam={selectedBeam}
             onSelectBeam={onSelectBeam}
             buildupZones={buildupZones}
+            showAllExceptDisabled={showAllExceptDisabled}
           />
         )}
       </div>

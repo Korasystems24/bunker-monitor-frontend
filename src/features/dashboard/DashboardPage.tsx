@@ -1,4 +1,4 @@
-import { useState, Suspense, lazy } from 'react'
+import { useMemo, useState, Suspense, lazy } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { useBunkers, useLatestMeasurement, useGeometry, useBuildup } from '../../api/hooks'
 import { VesselPanel } from './VesselPanel'
@@ -8,6 +8,11 @@ import { BeamHealthBar } from './BeamHealthBar'
 import { BuildupPanel } from './BuildupPanel'
 import { ErrorMessage } from '../../components/ErrorMessage'
 import { Skeleton } from '../../components/Skeleton'
+import { detectBuildupExceptDisabled } from '../../lib/detectBuildup'
+import {
+  readShowAllExceptDisabled,
+  writeShowAllExceptDisabled,
+} from './showAllBeamsPreference'
 
 // three.js/r3f are heavy — keep them out of the main bundle until the dashboard actually renders
 const Scene3DPanel = lazy(() =>
@@ -26,6 +31,12 @@ export function DashboardPage() {
   } = useBunkers()
 
   const [selectedBeam, setSelectedBeam] = useState<string | null>(null)
+  const [showAllExceptDisabled, setShowAllExceptDisabled] = useState(readShowAllExceptDisabled)
+
+  function updateShowAllExceptDisabled(checked: boolean) {
+    setShowAllExceptDisabled(checked)
+    writeShowAllExceptDisabled(checked)
+  }
 
   const {
     data: measurement,
@@ -35,6 +46,15 @@ export function DashboardPage() {
 
   const { data: geometry } = useGeometry(activeBunkerId)
   const { data: buildup, isLoading: buildupLoading } = useBuildup(activeBunkerId)
+
+  const displayedBuildup = useMemo(() => {
+    if (!buildup) return undefined
+    if (!showAllExceptDisabled || !measurement) return buildup
+    return {
+      ...buildup,
+      zones: detectBuildupExceptDisabled(measurement.beams, buildup.threshold_m),
+    }
+  }, [buildup, measurement, showAllExceptDisabled])
 
   const activeBunker = bunkers?.find((b) => b.id === activeBunkerId)
 
@@ -78,7 +98,10 @@ export function DashboardPage() {
             {measurementError && <ErrorMessage message="Нет данных замеров. Сервер недоступен." />}
 
             <div className="mt-auto">
-              <BeamHealthBar measurement={measurement} />
+              <BeamHealthBar
+                measurement={measurement}
+                showAllExceptDisabled={showAllExceptDisabled}
+              />
             </div>
           </div>
 
@@ -88,6 +111,8 @@ export function DashboardPage() {
             isLoading={measurementLoading}
             selectedBeam={selectedBeam}
             onSelectBeam={setSelectedBeam}
+            showAllExceptDisabled={showAllExceptDisabled}
+            onShowAllExceptDisabledChange={updateShowAllExceptDisabled}
           />
         </div>
       )}
@@ -101,7 +126,8 @@ export function DashboardPage() {
             isLoading={measurementLoading}
             selectedBeam={selectedBeam}
             onSelectBeam={setSelectedBeam}
-            buildupZones={buildup?.zones}
+            buildupZones={displayedBuildup?.zones}
+            showAllExceptDisabled={showAllExceptDisabled}
           />
 
           <Suspense fallback={<Skeleton className="h-full" />}>
@@ -111,12 +137,19 @@ export function DashboardPage() {
               isLoading={measurementLoading}
               selectedBeam={selectedBeam}
               onSelectBeam={setSelectedBeam}
+              showAllExceptDisabled={showAllExceptDisabled}
             />
           </Suspense>
         </div>
       )}
 
-      {activeBunkerId && <BuildupPanel analysis={buildup} isLoading={buildupLoading} />}
+      {activeBunkerId && (
+        <BuildupPanel
+          analysis={displayedBuildup}
+          isLoading={buildupLoading}
+          countsAllExceptDisabled={showAllExceptDisabled}
+        />
+      )}
     </div>
   )
 }

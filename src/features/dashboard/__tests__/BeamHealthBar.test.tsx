@@ -62,4 +62,18 @@ describe('BeamHealthBar', () => {
     render(<BeamHealthBar measurement={measurement} />)
     expect(screen.getByText('1/2')).toBeInTheDocument()
   })
+
+  it('counts non-disabled outer beams when show-all is on, and still skips Disabled', () => {
+    const measurement = makeMeasurement([
+      makeBeam('A6', 'NotUsed, WeakSignal', 2.4),
+      makeBeam('A7', 'Disabled', 0),
+      makeBeam('A8', '', 1.5),
+      makeBeam('A1', 'NotUsed', 2.0),
+    ])
+    const { rerender } = render(<BeamHealthBar measurement={measurement} />)
+    expect(screen.getByText('1/3')).toBeInTheDocument()
+
+    rerender(<BeamHealthBar measurement={measurement} showAllExceptDisabled />)
+    expect(screen.getByText('2/3')).toBeInTheDocument()
+  })
 })

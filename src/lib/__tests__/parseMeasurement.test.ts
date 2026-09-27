@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { hasUsableHeight, parseBeam, parseMeasurement } from '../parseMeasurement'
+import {
+  hasDisplayHeight,
+  hasUsableHeight,
+  isBeamDisabled,
+  parseBeam,
+  parseMeasurement,
+} from '../parseMeasurement'
 import type { Beam, Measurement } from '../../types'
 
 const makeBeam = (overrides: Partial<Beam> = {}): Beam => ({
@@ -107,5 +113,24 @@ describe('hasUsableHeight', () => {
 
   it('accepts a positive reliable height', () => {
     expect(hasUsableHeight(parseBeam(makeBeam({ height: 1.7, status: '' })))).toBe(true)
+  })
+})
+
+describe('hasDisplayHeight', () => {
+  it('ignores NotUsed heights unless show-all is on', () => {
+    const beam = parseBeam(makeBeam({ height: 2.4, status: 'NotUsed, WeakSignal' }))
+    expect(hasDisplayHeight(beam, false)).toBe(false)
+    expect(hasDisplayHeight(beam, true)).toBe(true)
+  })
+
+  it('never displays a Disabled beam, even with show-all and a positive height', () => {
+    const beam = parseBeam(makeBeam({ height: 2.4, status: 'Unknown, NotUsed, Disabled' }))
+    expect(isBeamDisabled(beam)).toBe(true)
+    expect(hasDisplayHeight(beam, true)).toBe(false)
+  })
+
+  it('rejects a non-disabled height of 0', () => {
+    const beam = parseBeam(makeBeam({ height: 0, status: 'WeakSignal' }))
+    expect(hasDisplayHeight(beam, true)).toBe(false)
   })
 })
