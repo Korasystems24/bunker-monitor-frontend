@@ -3,6 +3,7 @@ name: bunker-monitor
 services:
   frontend:
     build: .
+    restart: unless-stopped
     ports:
       - '${FRONTEND_PORT:-5173}:5173'
     env_file:
